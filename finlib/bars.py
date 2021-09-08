@@ -4,7 +4,7 @@ import pandas as pd
 
 
 # Just as a reference: _binance_columns = ['trade_id', 'price', 'qty', 'quoteQty', 'time', 'isBuyerMaker', 'isBestMatch']
-_bars_columns = ['time', 'open', 'close', 'high', 'low', 'volume_contracts', 'volume_dollars', 'vwap', 'buyer_maker_pct', 'best_match_pct']
+_bars_columns = ['time', 'open', 'close', 'high', 'low', 'volume_contracts', 'volume_dollars', 'buyer_maker_pct', 'best_match_pct']
 
 
 def time_bars(tick_data: pd.DataFrame, period: str, is_binance=True) -> pd.DataFrame:
@@ -31,9 +31,23 @@ def time_bars(tick_data: pd.DataFrame, period: str, is_binance=True) -> pd.DataF
 
     return time_bars[_bars_columns].reset_index(drop=True)
 
-class TickBars:
-    def __init__(self) -> None:
-        print('Here it goes!')
+
+def tick_bars(tick_data: pd.DataFrame, n=1000, is_binance=True) -> pd.DataFrame:
+    tick_bars = tick_data.groupby(tick_data.index // n).agg(
+        time = ('time', 'min'),
+        open = ('price', 'first'),
+        close = ('price', 'last'),
+        high = ('price', 'max'),
+        low = ('price', 'min'),
+        volume_contracts = ('qty', 'sum'),
+        volume_dollars = ('quoteQty', 'sum'),
+        buyer_maker_pct = ('isBuyerMaker', lambda sample: np.mean(sample)),
+        best_match_pct = ('isBestMatch', lambda sample: np.mean(sample))
+    )
+
+    tick_bars['time'] = tick_bars['time'].apply(lambda time: pd.to_datetime(time, unit='ms'))
+
+    return tick_bars[_bars_columns].reset_index(drop=True)
 
 class VolumeBars:
     def __init__(self) -> None:
