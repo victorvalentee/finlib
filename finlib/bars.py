@@ -7,7 +7,8 @@ import pandas as pd
 _bars_columns = ['time', 'open', 'close', 'high', 'low', 'volume_contracts', 'volume_dollars', 'vwap', 'buyer_maker_pct', 'best_match_pct']
 
 
-def time_bars(tick_data, period, is_binance=True) -> pd.DataFrame:
+def time_bars(tick_data: pd.DataFrame, period: str, is_binance=True) -> pd.DataFrame:
+    # TODO: this is a slow function. How can I speed it up so I can use it for a full day analysis?
     tick_data['datetime'] = tick_data['time'].apply(lambda time: pd.to_datetime(time, unit='ms'))
     
     tick_data.index = tick_data['datetime']
@@ -25,8 +26,8 @@ def time_bars(tick_data, period, is_binance=True) -> pd.DataFrame:
         best_match_pct = ('isBestMatch', lambda sample: np.mean(sample))
     )
 
-    # TODO: does vwap work for cryto?
-    time_bars['vwap'] = time_bars['volume_dollars'] / time_bars['volume_contracts']
+    # TODO: implement VWAP. But first, does vwap work for cryto?
+    # time_bars['vwap'] = time_bars['volume_dollars'] / time_bars['volume_contracts']
 
     return time_bars[_bars_columns].reset_index(drop=True)
 
