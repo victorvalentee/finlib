@@ -7,13 +7,34 @@ import pandas as pd
 _bars_columns = ['time', 'open', 'close', 'high', 'low', 'volume_contracts', 'volume_dollars', 'buyer_maker_pct', 'best_match_pct']
 
 
+def get_bars_index_by_column_amount(tick_data, column, amount):
+    sum = 0
+    new_index = 0
+    index = []
+
+    for index_, value in enumerate(tick_data[column]):    
+        sum += value
+        
+        if sum > amount:
+            index.append(index_)
+            new_index = index_
+            sum = 0
+            
+        else:
+            index.append(new_index)
+        
+    return index
+
+
 def time_bars(tick_data: pd.DataFrame, period: str, is_binance=True) -> pd.DataFrame:
     # TODO: this is a slow function. How can I speed it up so I can use it for a full day analysis?
-    tick_data['datetime'] = tick_data['time'].apply(lambda time: pd.to_datetime(time, unit='ms'))
-    
-    tick_data.index = tick_data['datetime']
 
-    time_bars = tick_data.resample(period).agg(
+    tick_data_cp = tick_data.copy()
+    tick_data_cp['datetime'] = tick_data_cp['time'].apply(lambda time: pd.to_datetime(time, unit='ms'))
+    
+    tick_data_cp.index = tick_data_cp['datetime']
+
+    time_bars = tick_data_cp.resample(period).agg(
         func = None, # TODO: this line can be erased when pandas is upgraded to version 1.4.
         time = ('datetime', 'min'),
         open = ('price', 'first'),
@@ -49,13 +70,47 @@ def tick_bars(tick_data: pd.DataFrame, n=1000, is_binance=True) -> pd.DataFrame:
 
     return tick_bars[_bars_columns].reset_index(drop=True)
 
-class VolumeBars:
-    def __init__(self) -> None:
-        print('Here it goes!')
 
-class DollarBars:
-    def __init__(self) -> None:
-        print('Here it goes!')
+def volume_bars(tick_data: pd.DataFrame, volume=10, is_binance=True) -> pd.DataFrame:
+    #TODO: volume bars and dollar bars are prone to overflow. How to deal with this characteristic? 
+    bars_index = get_bars_index_by_column_amount(tick_data, column='qty', amount=volume)
+
+    volume_bars = tick_data.groupby(bars_index).agg(
+        time = ('time', 'min'),
+        open = ('price', 'first'),
+        close = ('price', 'last'),
+        high = ('price', 'max'),
+        low = ('price', 'min'),
+        volume_contracts = ('qty', 'sum'),
+        volume_dollars = ('quoteQty', 'sum'),
+        buyer_maker_pct = ('isBuyerMaker', lambda sample: np.mean(sample)),
+        best_match_pct = ('isBestMatch', lambda sample: np.mean(sample))
+    )
+
+    volume_bars['time'] = volume_bars['time'].apply(lambda time: pd.to_datetime(time, unit='ms'))
+
+    return volume_bars[_bars_columns].reset_index(drop=True)
+
+
+def dollar_bars(tick_data: pd.DataFrame, dollars=1000, is_binance=True) -> pd.DataFrame:
+    #TODO: volume bars and dollar bars are prone to overflow. How to deal with this characteristic? 
+    bars_index = get_bars_index_by_column_amount(tick_data, column='quoteQty', amount=dollars)
+
+    dollar_bars = tick_data.groupby(bars_index).agg(
+        time = ('time', 'min'),
+        open = ('price', 'first'),
+        close = ('price', 'last'),
+        high = ('price', 'max'),
+        low = ('price', 'min'),
+        volume_contracts = ('qty', 'sum'),
+        volume_dollars = ('quoteQty', 'sum'),
+        buyer_maker_pct = ('isBuyerMaker', lambda sample: np.mean(sample)),
+        best_match_pct = ('isBestMatch', lambda sample: np.mean(sample))
+    )
+
+    dollar_bars['time'] = dollar_bars['time'].apply(lambda time: pd.to_datetime(time, unit='ms'))
+
+    return dollar_bars[_bars_columns].reset_index(drop=True)
 
 class TickImbalanceBars:
     def __init__(self) -> None:
