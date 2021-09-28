@@ -7,10 +7,17 @@ _binance_columns = ['trade_id', 'price', 'qty', 'quoteQty', 'time', 'isBuyerMake
 def read_csv(filepath, is_binance=True) -> pd.DataFrame:
     """Reads a csv file into a pandas Dataframe."""
     if is_binance:
-        return pd.read_csv(filepath, names=_binance_columns)
+        tick_data = pd.read_csv(filepath, names=_binance_columns)
     else:
         return None
+    
+    tick_data = tick_data.sort_values('trade_id') \
+                .drop_duplicates() \
+                .reset_index(drop=True)
+    
+    tick_data.set_index(pd.to_datetime(tick_data.time, unit='ms'), inplace=True)
 
+    return tick_data
 
 if __name__ == '__main__':
     tick_data = read_csv('/home/victorvalentee/python_projects/data/test/binance_ticks.csv')

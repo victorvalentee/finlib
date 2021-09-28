@@ -54,7 +54,7 @@ def time_bars(tick_data: pd.DataFrame, period: str, is_binance=True) -> pd.DataF
 
 
 def tick_bars(tick_data: pd.DataFrame, n=1000, is_binance=True) -> pd.DataFrame:
-    tick_bars = tick_data.groupby(tick_data.index // n).agg(
+    tick_bars = tick_data.groupby(tick_data.trade_id // n).agg(
         time = ('time', 'min'),
         open = ('price', 'first'),
         close = ('price', 'last'),
